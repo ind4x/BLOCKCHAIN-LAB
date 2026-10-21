@@ -1,0 +1,573 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\frenchspacing
+\usepackage{lmodern}
+\usepackage{geometry}
+\geometry{top=2.5cm, bottom=2.5cm, left=2.5cm, right=2.5cm}
+
+\usepackage{amsmath, amssymb}
+\usepackage{booktabs}
+\usepackage{float}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{graphicx}
+\usepackage{fancyhdr}
+\usepackage{tikz}
+\usetikzlibrary{shapes.multipart, arrows.meta, positioning, calc}
+
+% Couleurs du rapport
+\definecolor{MundiBlue}{RGB}{20, 45, 110}
+\definecolor{LightGrey}{RGB}{245, 245, 247}
+\definecolor{AlertRed}{RGB}{200, 30, 30}
+\definecolor{CodeGreen}{RGB}{40, 140, 60}
+\definecolor{CodeGray}{RGB}{100, 100, 100}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=MundiBlue,
+    urlcolor=MundiBlue,
+    citecolor=MundiBlue
+}
+
+% Configuration Listings pour Python
+\lstset{
+    language=Python,
+    basicstyle=\ttfamily\small,
+    backgroundcolor=\color{LightGrey},
+    keywordstyle=\color{MundiBlue}\bfseries,
+    stringstyle=\color{CodeGreen},
+    commentstyle=\color{CodeGray}\itshape,
+    numbers=left,
+    numberstyle=\tiny\color{CodeGray},
+    stepnumber=1,
+    numbersep=8pt,
+    showstringspaces=false,
+    breaklines=true,
+    frame=single,
+    rulecolor=\color{black!15},
+    tabsize=4
+}
+
+% Configuration des en-tetes et pieds de page (style TP-01)
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small Université Mundiapolis}
+\fancyhead[R]{\small Génie Informatique}
+\fancyfoot[L]{\small Fellah Youssef}
+\fancyfoot[R]{\small \thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\begin{document}
+
+% ==========================================
+% PAGE DE GARDE (STYLE OFFICIEL TP-01)
+% ==========================================
+\begin{titlepage}
+    \thispagestyle{empty}
+    \begin{center}
+        \IfFileExists{logo_mundiapolis.png}{%
+            \includegraphics[width=6.5cm]{logo_mundiapolis.png}\\[0.6cm]
+        }{%
+            \vspace*{2cm}
+        }
+    \end{center}
+
+    \noindent
+    \begin{minipage}[t]{0.5\textwidth}
+        \textbf{UNIVERSITÉ MUNDIAPOLIS}\\
+        École d’Ingénieurs\\
+        Casablanca
+    \end{minipage}
+    \hfill
+    \begin{minipage}[t]{0.5\textwidth}
+        \begin{flushright}
+            \textbf{2\textsuperscript{ème} Année CI}\\
+            Génie Informatique\\
+            Filière : Informatique
+        \end{flushright}
+    \end{minipage}
+
+    \vspace{2cm}
+
+    \noindent
+    \rule{\textwidth}{1.5pt}\\[0.4cm]
+    \begin{center}
+        {\Huge \textbf{Principes de la Blockchain}}\\[0.4cm]
+        {\Large Application des principes de la blockchain en Python}
+    \end{center}
+    \vspace{-0.2cm}
+    \noindent
+    \rule{\textwidth}{1.5pt}\\[1.5cm]
+
+    \begin{center}
+        {\large \textbf{Module : Blockchain --- TP 02}}\\[0.3cm]
+        {\large \textbf{Preuve d'enjeu (Proof of Stake)}}
+    \end{center}
+
+    \vspace{3cm}
+
+    \noindent
+    \begin{minipage}[t]{0.5\textwidth}
+        \textbf{Réalisé par :}\\
+        \textsc{Fellah} Youssef
+    \end{minipage}
+    \hfill
+    \begin{minipage}[t]{0.5\textwidth}
+        \begin{flushright}
+            \textbf{Encadré par :}\\
+            Prof. \textsc{Louja} Ayoub
+        \end{flushright}
+    \end{minipage}
+
+    \vfill
+
+    \begin{center}
+        \textbf{Année universitaire : 2026/2027}
+    \end{center}
+\end{titlepage}
+
+% ==========================================
+% TABLE DES MATIERES
+% ==========================================
+\newpage
+\pagenumbering{roman}
+\tableofcontents
+\newpage
+\pagenumbering{arabic}
+
+% ==========================================
+% CONTENU DU RAPPORT
+% ==========================================
+
+\section{Introduction}
+
+\subsection{Contexte}
+Dans les protocoles de consensus décentralisés, la \textbf{preuve d'enjeu} (\emph{Proof of Stake} ou PoS) constitue une alternative économe en énergie à la preuve de travail (\emph{Proof of Work}). Contrairement au PoW où la production d'un bloc résulte d'une compétition de calcul brute (minage par force brute du nonce), le protocole PoS sélectionne de manière pseudo-aléatoire le producteur de bloc (appelé \textbf{proposant} ou \emph{forger}).
+
+La probabilité $p_i$ pour un validateur $i$ d'être désigné pour forger le prochain bloc est rigoureusement proportionnelle à la \textbf{mise} (\emph{stake}) qu'il a engagée et verrouillée en garantie dans le réseau :
+\[
+p_i = \frac{m_i}{\sum_{j} m_j} = \frac{m_i}{M}
+\]
+où $m_i$ désigne la mise du validateur $i$ et $M$ la masse totale des enjeux engagés par l'ensemble des validateurs actifs. 
+
+Ce rapport présente l'implémentation, l'expérimentation et l'analyse de sécurité d'un réseau Proof of Stake complet développé en Python avec une architecture client-serveur HTTP, réalisé dans le cadre du TP~02 du module Blockchain.
+
+\subsection{Objectifs}
+Les travaux menés visent à :
+\begin{enumerate}
+    \item implémenter les règles d'adhésion au réseau avec seuil d'enjeu minimal (\textbf{Règle R1}) ;
+    \item concevoir l'algorithme déterministe de sélection pondérée par la roulette des mises (\textbf{Règle R2}) ;
+    \item orchestrer la production de blocs transparents et auditables par n'importe quel nœud (\textbf{Règles R3 et R4}) ;
+    \item évaluer l'impact cumulatif des récompenses de forgeage et quantifier le risque de centralisation (\textbf{Règle R5}) ;
+    \item auditer l'intégrité de la blockchain et identifier les blocs falsifiés de manière autonome (\textbf{Règle R6}) ;
+    \item appliquer les sanctions économiques de confiscation de mise et d'exclusion (\emph{slashing}, \textbf{Règle R7}) ;
+    \item tester la robustesse statistique du protocole face à des tricheurs exploitant des tirages biaisés.
+\end{enumerate}
+
+\subsection{Outils et Architecture}
+Le réseau fonctionne selon une architecture distribuée interconnectée par le protocole HTTP :
+\begin{itemize}
+    \item \textbf{Serveur de consensus} (\texttt{Server.py}) : hébergé sur un nœud central sous le framework Flask (port 5000), maintenant l'état global du réseau, la liste des validateurs et le grand livre (\emph{ledger}) des blocs produits ;
+    \item \textbf{Nœuds validateurs} (\texttt{main.ipynb} et notebooks individuels sous \texttt{participants/}) : clients autonomes utilisant la bibliothèque \texttt{requests} pour interagir avec l'API REST du serveur et réexécuter localement les règles de contrôle ;
+    \item \textbf{Reproductibilité} : initialisation du générateur pseudo-aléatoire avec une graine fixe (\texttt{GRAINE = 2}) permettant la comparaison formelle des mesures empiriques avec les valeurs théoriques du protocole.
+\end{itemize}
+
+\subsection{Configuration initiale des validateurs}
+Le réseau démarre avec quatre participants dont les mises initiales vérifient la contrainte $m_i \ge 10\text{ ETH}$ :
+
+\begin{table}[H]
+\centering
+\begin{tabular}{@{}clcc@{}}
+\toprule
+\textbf{Nœud (NUM)} & \textbf{Validateur} & \textbf{Mise initiale ($m_i$)} & \textbf{Part théorique ($p_i$)} \\
+\midrule
+1 & Idriss  & 40 ETH & 40,0\,\% \\
+2 & Moussa  & 25 ETH & 25,0\,\% \\
+3 & Youssef & 20 ETH & 20,0\,\% \\
+4 & Ayoub   & 15 ETH & 15,0\,\% \\
+\midrule
+\textbf{Total} & \textbf{Réseau ($M$)} & \textbf{100 ETH} & \textbf{100,0\,\%} \\
+\bottomrule
+\end{tabular}
+\caption{État initial du pool de validateurs}
+\label{tab:validateurs_init}
+\end{table}
+
+% ------------------------------------------------------------------
+\section{Mise en place du protocole et Règles de Consensus}
+
+\subsection{Adhésion et seuil d'engagement (Règle R1)}
+
+\subsubsection*{Principe}
+L'entrée d'un validateur requiert le séquestre d'une garantie minimale $\ge 10\text{ ETH}$. Cette garantie sert de collatéral économique : elle permet de sanctionner financièrement tout comportement byzantin (malveillant). Le point de terminaison \texttt{POST /rejoindre} vérifie cette contrainte et met à jour la mise totale du réseau.
+
+\subsubsection*{Résultats}
+Les quatre participants enregistrent successivement leurs enjeux :
+\begin{lstlisting}
+200 {'mise_totale': 40, 'validateur': {'blocs': 0, 'exclu': False, 'mise': 40, 'nom': 'Idriss'}}
+200 {'mise_totale': 65, 'validateur': {'blocs': 0, 'exclu': False, 'mise': 25, 'nom': 'Moussa'}}
+200 {'mise_totale': 85, 'validateur': {'blocs': 0, 'exclu': False, 'mise': 20, 'nom': 'Youssef'}}
+200 {'mise_totale': 100, 'validateur': {'blocs': 0, 'exclu': False, 'mise': 15, 'nom': 'Ayoub'}}
+\end{lstlisting}
+Une tentative d'adhésion avec une mise de 5~ETH est immédiatement rejetée par le serveur :
+\begin{center}
+\texttt{400 \{'erreur': 'mise inferieure a 10'\}}
+\end{center}
+
+% ------------------------------------------------------------------
+\subsection{Sélection du proposant par roulette (Règle R2)}
+
+\subsubsection*{Principe de la roulette déroulée}
+Avant la création de chaque bloc, le protocole effectue un tirage aléatoire $t \in [0 ; M]$. On modélise le capital total comme un segment continu $[0 ; M]$ découpé en intervalles successifs dont la largeur correspond exactement à la mise de chaque validateur. Le validateur sélectionné est celui dont l'intervalle cumulé contient $t$.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    scale=0.11,
+    segment/.style={rectangle, draw=MundiBlue, thick, minimum height=1.3cm, font=\sffamily\scriptsize, align=center},
+    axe/.style={-{Stealth[length=2.5mm]}, thick, MundiBlue}
+]
+\node[segment, fill=LightGrey, minimum width=40cm] (idriss) at (20, 0) {Idriss (40 ETH)\\$[0 ; 40]$};
+\node[segment, fill=LightGrey!70, minimum width=25cm] (moussa) at (52.5, 0) {Moussa (25 ETH)\\$]40 ; 65]$};
+\node[segment, fill=LightGrey!50, minimum width=20cm] (youssef) at (75, 0) {Youssef (20 ETH)\\$]65 ; 85]$};
+\node[segment, fill=LightGrey!30, minimum width=15cm] (ayoub) at (92.5, 0) {Ayoub (15 ETH)\\$]85 ; 100]$};
+
+% Axe cumulé
+\draw[axe] (0, -2.5) -- (105, -2.5) node[right, font=\scriptsize\sffamily]{Mise cumulée};
+\foreach \x/\label in {0/0, 40/40, 65/65, 85/85, 100/100}
+    \draw[thick] (\x, -2.0) -- (\x, -3.0) node[below, font=\tiny\sffamily]{\label};
+
+% Tirage test 52.3
+\draw[AlertRed, thick, -{Stealth[length=2mm]}] (52.3, 3.2) -- (52.3, 1.2) node[above=0.6cm, font=\scriptsize\bfseries]{$t = 52{,}3$};
+\node[AlertRed, font=\tiny\sffamily] at (52.3, -4.5) {$40 < 52{,}3 \le 65 \implies$ Moussa};
+\end{tikzpicture}
+\caption{Mécanisme de sélection par roulette pondérée (projection linéaire)}
+\label{fig:roulette}
+\end{figure}
+
+\subsubsection*{Algorithme}
+La fonction \texttt{choisir\_proposant} est une fonction pure : pour un ensemble ordonné de mises et un tirage donné, elle produit invariablement le même résultat, permettant son exécution locale chez n'importe quel nœud vérificateur.
+
+\begin{lstlisting}
+def choisir_proposant(mises, tirage):
+    cumul = 0.0
+    for nom, mise in mises:
+        cumul += mise
+        if tirage <= cumul:
+            return nom
+    return mises[-1][0] if mises else None
+\end{lstlisting}
+
+\subsubsection*{Validation sur tirages de référence}
+L'évaluation sur les valeurs tests prévues par le sujet confirme l'exactitude de l'intervalle :
+\begin{itemize}
+    \item $t = 52{,}3 \in ]40 ; 65] \implies$ \textbf{Moussa}
+    \item $t = 12{,}0 \in [0 ; 40] \implies$ \textbf{Idriss}
+    \item $t = 95{,}5 \in ]85 ; 100] \implies$ \textbf{Ayoub}
+\end{itemize}
+
+% ------------------------------------------------------------------
+\subsection{Production d'un bloc et auditabilité (Règles R3 et R4)}
+
+\subsubsection*{Structure d'un bloc PoS}
+Contrairement au bloc PoW qui stocke un nonce miné, le bloc PoS consigne la preuve de sa légitimité en intégrant explicitement :
+\begin{itemize}
+    \item \texttt{numero} : hauteur du bloc dans la chaîne ;
+    \item \texttt{proposant} : identité du validateur autorisé à signer ;
+    \item \texttt{tirage} : valeur aléatoire générée par le consensus ;
+    \item \texttt{mises} : cliché (\emph{snapshot}) complet des mises actives au moment du tirage.
+\end{itemize}
+
+\subsubsection*{Vérification autonome}
+L'appel à \texttt{POST /produire\_bloc} génère le premier bloc :
+\begin{lstlisting}
+{
+  'numero': 1,
+  'proposant': 'Ayoub',
+  'tirage': 95.6,
+  'mises': [['Idriss', 40], ['Moussa', 25], ['Youssef', 20], ['Ayoub', 15]]
+}
+\end{lstlisting}
+Tout nœud recalcule localement $\texttt{choisir\_proposant}(\text{mises}, 95{,}6) = \text{"Ayoub"}$, attestant que le bloc respecte la règle R3.
+
+\subsubsection*{Distribution sur un échantillon court (15 blocs)}
+La production de 14 blocs supplémentaires permet d'obtenir les 15 premiers blocs de la chaîne (tableau~\ref{tab:15_blocs}).
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{@{}clrcl@{}}
+\toprule
+\textbf{Bloc} & \textbf{Proposant} & \textbf{Tirage ($t$)} & \textbf{Intervalle associé} & \textbf{Statut R4} \\
+\midrule
+1  & Ayoub   & 95,60 & $]85 ; 100]$ & Conforme \\
+2  & Ayoub   & 94,78 & $]85 ; 100]$ & Conforme \\
+3  & Idriss  &  5,66 & $[0 ; 40]$   & Conforme \\
+4  & Idriss  &  8,49 & $[0 ; 40]$   & Conforme \\
+5  & Youssef & 83,55 & $]65 ; 85]$  & Conforme \\
+6  & Youssef & 73,60 & $]65 ; 85]$  & Conforme \\
+7  & Youssef & 66,97 & $]65 ; 85]$  & Conforme \\
+8  & Idriss  & 30,81 & $[0 ; 40]$   & Conforme \\
+9  & Moussa  & 60,59 & $]40 ; 65]$  & Conforme \\
+10 & Moussa  & 60,68 & $]40 ; 65]$  & Conforme \\
+11 & Moussa  & 58,12 & $]40 ; 65]$  & Conforme \\
+12 & Idriss  & 15,84 & $[0 ; 40]$   & Conforme \\
+13 & Moussa  & 43,07 & $]40 ; 65]$  & Conforme \\
+14 & Idriss  & 39,35 & $[0 ; 40]$   & Conforme \\
+15 & Youssef & 72,30 & $]65 ; 85]$  & Conforme \\
+\bottomrule
+\end{tabular}
+\caption{Historique des 15 premiers blocs générés ($\text{seed} = 2$)}
+\label{tab:15_blocs}
+\end{table}
+
+Sur 15 blocs, la distribution observée est : Idriss (5 blocs, 33,3\,\%), Moussa (4 blocs, 26,7\,\%), Youssef (4 blocs, 26,7\,\%) et Ayoub (2 blocs, 13,3\,\%). Sur un échantillon aussi restreint, la variance statistique est forte : Moussa et Youssef obtiennent le même nombre de blocs alors que leurs mises diffèrent de 5~ETH.
+
+% ------------------------------------------------------------------
+\subsection{Convergence statistique sur 5 000 blocs (Règle R2)}
+
+Pour valider expérimentalement la convergence de la loi des grands nombres ($p_i \to m_i/M$), 5\,000 blocs additionnels sont produits, portant la chaîne à 5\,015 blocs sans récompense active ($r = 0$).
+
+\begin{table}[H]
+\centering
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+\textbf{Validateur} & \textbf{Mise} & \textbf{Part théorique ($p_i$)} & \textbf{Part observée} & \textbf{Écart absolu} \\
+\midrule
+Idriss  & 40 ETH & 40,0\,\% & 39,5\,\% & $-0{,}5\,\%$ \\
+Moussa  & 25 ETH & 25,0\,\% & 25,2\,\% & $+0{,}2\,\%$ \\
+Youssef & 20 ETH & 20,0\,\% & 20,7\,\% & $+0{,}7\,\%$ \\
+Ayoub   & 15 ETH & 15,0\,\% & 14,6\,\% & $-0{,}4\,\%$ \\
+\bottomrule
+\end{tabular}
+\caption{Comparaison des fréquences de production sur 5\,015 blocs}
+\label{tab:5000_blocs}
+\end{table}
+
+L'écart maximal observé n'excède pas $0{,}7$ point de pourcentage. La proportionnalité du tirage est donc expérimentalement vérifiée.
+
+% ------------------------------------------------------------------
+\subsection{Dynamique des récompenses et risque de centralisation (Règle R5)}
+
+\subsubsection*{Formulation mathématique}
+La règle R5 alloue une récompense au validateur qui forge un bloc : sa mise augmente d'une fraction $r$ :
+\[
+m_i^{(k+1)} = m_i^{(k)} \cdot (1 + r)
+\]
+tandis que les mises des autres validateurs restent stationnaires.
+
+\subsubsection*{Résultats sur 1\,000 blocs ($r = 0{,}3\,\%$)}
+L'expérience est lancée sur un réseau réinitialisé avec les mêmes 4 validateurs sur 1\,000 blocs avec $r = 0{,}003$.
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{@{}lrrrrcc@{}}
+\toprule
+\textbf{Validateur} & \textbf{Mise dép.} & \textbf{Mise fin} & \textbf{Part dép.} & \textbf{Part fin} & \textbf{Blocs} & \textbf{Facteur ($\times$)} \\
+\midrule
+Idriss  &  40,0 ETH & 175,2 ETH & 40,0\,\% & \textbf{62,9\,\%} & 493 & \textbf{4,38} \\
+Moussa  &  25,0 ETH &  50,2 ETH & 25,0\,\% & 18,0\,\%          & 233 & 2,01 \\
+Youssef &  20,0 ETH &  31,3 ETH & 20,0\,\% & 11,2\,\%          & 149 & 1,56 \\
+Ayoub   &  15,0 ETH &  21,8 ETH & 15,0\,\% &  7,8\,\%          & 125 & 1,45 \\
+\midrule
+\textbf{Réseau} & \textbf{100,0 ETH} & \textbf{278,5 ETH} & \textbf{100,0\,\%} & \textbf{100,0\,\%} & \textbf{1000} & \textbf{2,78} \\
+\bottomrule
+\end{tabular}
+\caption{Évolution des mises et des parts après 1\,000 blocs avec récompenses ($r = 0{,}3\,\%$)}
+\label{tab:recompenses}
+\end{table}
+
+\subsubsection*{Analyse de l'amplification de centralisation}
+Le capital global du réseau a cru d'un facteur 2,78. Bien qu'aucun validateur n'ait perdu d'ETH dans l'absolu (Moussa a par exemple doublé son capital, passant de 25 à 50,2~ETH), la part relative de Moussa, Youssef et Ayoub s'est effondrée. 
+
+Seul Idriss progresse plus vite que la moyenne du réseau ($\times 4{,}38 > 2{,}78$), portant sa part de 40\,\% à près de 63\,\%. C'est l'illustration empirique du biais de centralisation \emph{"rich get richer"} inhérent au Proof of Stake naïf : détenir une mise plus forte confère plus de blocs, donc plus de récompenses, amplifiant l'avantage initial à chaque génération.
+
+% ------------------------------------------------------------------
+\subsection{Détection des fraudes et Slashing (Règles R6 et R7)}
+
+\subsubsection*{Attaque par usurpation d'identité (Étape 8)}
+Un validateur malveillant (Ayoub) force l'inscription d'un bloc à son propre nom via \texttt{POST /falsifier}, alors que le tirage attribué ($t = 73{,}60$) se situe dans l'intervalle de Youssef ($]65 ; 85]$). Le bloc falsifié porte le numéro 6.
+
+\subsubsection*{Algorithme de vérification autonome (Règle R6)}
+Tout participant audite l'ensemble de la chaîne localement sans solliciter l'avis du serveur :
+
+\begin{lstlisting}
+def verifier_bloc(bloc):
+    # R6 : recalcule le proposant attendu d'apres le tirage public
+    attendu = choisir_proposant(bloc["mises"], bloc["tirage"])
+    return bloc["proposant"] == attendu
+
+def verifier_chaine(chaine):
+    return [b["numero"] for b in chaine if not verifier_bloc(b)]
+\end{lstlisting}
+
+L'exécution locale produit le verdict détaillé (tableau~\ref{tab:audit_fraude}).
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{@{}clrcl@{}}
+\toprule
+\textbf{Bloc} & \textbf{Signé par} & \textbf{Tirage} & \textbf{Recalcul local R2} & \textbf{Verdict d'audit} \\
+\midrule
+1 & Ayoub   & 95,60 & Ayoub   & \texttt{ok} \\
+2 & Ayoub   & 94,78 & Ayoub   & \texttt{ok} \\
+3 & Idriss  &  5,66 & Idriss  & \texttt{ok} \\
+4 & Idriss  &  8,49 & Idriss  & \texttt{ok} \\
+5 & Youssef & 83,55 & Youssef & \texttt{ok} \\
+\textbf{6} & \textbf{Ayoub} & \textbf{73,60} & \textbf{Youssef} & \textbf{\texttt{FALSIFIE}} \\
+7 & Youssef & 66,97 & Youssef & \texttt{ok} \\
+8 & Idriss  & 30,81 & Idriss  & \texttt{ok} \\
+9 & Moussa  & 60,59 & Moussa  & \texttt{ok} \\
+\bottomrule
+\end{tabular}
+\caption{Audit autonome de la chaîne par recalcul public}
+\label{tab:audit_fraude}
+\end{table}
+
+Le bloc 6 est immédiatement et formellement identifié comme falsifié :
+\begin{center}
+\texttt{recalcul local : [6] \quad vs \quad réponse du réseau : [6]}
+\end{center}
+
+\subsubsection*{Exécution de la sanction (Règle R7)}
+Dès la détection, la sanction est appliquée via \texttt{POST /sanctionner} avec $\text{fraction} = 0{,}5$ :
+\begin{lstlisting}
+Ayoub : {'exclu': True, 'mise_restante': 7.5, 'perte': 7.5}
+mise totale apres exclusion : 85.0 ETH
+\end{lstlisting}
+Ayoub subit une pénalité financière immédiate de $7{,}5\text{ ETH}$ (50\,\% de sa mise) et est banni de la liste active des validateurs (\texttt{exclu = True}). La masse totale d'enjeux retombe à 85~ETH, augmentant automatiquement la part de marché des trois validateurs honnêtes restants.
+
+% ------------------------------------------------------------------
+\section{Tests approfondis du réseau}
+
+\subsection{Test 1 : Précision selon la taille de l'échantillon}
+La simulation est répétée sur 500 blocs puis sur 100\,000 blocs avec les 4 validateurs initiaux :
+
+\begin{table}[H]
+\centering
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+\textbf{Validateur} & \textbf{Part théorique} & \textbf{500 blocs} & \textbf{100\,000 blocs} & \textbf{Écart (100k)} \\
+\midrule
+Idriss  & 40,0\,\% & 39,4\,\% & 39,9\,\% & $-0{,}1\,\%$ \\
+Moussa  & 25,0\,\% & 24,6\,\% & 25,0\,\% & $\pm 0{,}0\,\%$ \\
+Youssef & 20,0\,\% & 20,0\,\% & 20,1\,\% & $+0{,}1\,\%$ \\
+Ayoub   & 15,0\,\% & 16,0\,\% & 15,0\,\% & $\pm 0{,}0\,\%$ \\
+\bottomrule
+\end{tabular}
+\caption{Convergence de la distribution en fonction du nombre de blocs}
+\label{tab:convergence_test}
+\end{table}
+
+L'écart maximal passe de $1{,}0$ point sur 500 blocs à $0{,}1$ point sur 100\,000 blocs, démontrant la stricte conformité asymptotique de l'algorithme.
+
+\subsection{Test 2 : Arrivée de 3 nouveaux validateurs}
+Trois validateurs rejoignent le réseau : Aymen (100~ETH), Timan (50~ETH) et Meryem (50~ETH). La mise totale passe à 300~ETH. Sur 5\,000 blocs :
+\begin{itemize}
+    \item Aymen détient $100/300 = 33{,}3\,\%$ de la mise et forge $33{,}4\,\%$ des blocs ;
+    \item Timan et Meryem détiennent chacun $16{,}7\,\%$ et forgent respectivement $17{,}3\,\%$ et $16{,}3\,\%$ ;
+    \item Les 4 participants d'origine conservent leur mise absolue mais voient leur part relative divisée exactement par 3.
+\end{itemize}
+
+\subsection{Test 3 : Emballement par récompense accrue ($r = 1{,}0\,\%$)}
+En portant le taux de récompense de $0{,}3\,\%$ à $1{,}0\,\%$ sur 1\,000 blocs, l'effet d'amplification devient exponentiel :
+\begin{itemize}
+    \item Idriss atteint une mise finale de \textbf{93\,914,3 ETH} (pour 40 ETH au départ), capturant \textbf{99,9\,\%} de l'ensemble de la masse monétaire du réseau ;
+    \item Moussa passe à 69,0~ETH, Youssef à 37,1~ETH et Ayoub à 26,2~ETH : leur capital s'est apprécié mais leur part relative devient nulle ($0{,}0\,\%$).
+\end{itemize}
+Ce test démontre qu'un taux de rémunération excessif détruit la décentralisation en quelques centaines de blocs.
+
+\subsection{Test 4 : Attaque par tirage biaisé et détection fréquentielle}
+
+\subsubsection*{Scénario d'attaque}
+Ayoub n'usurpe plus le nom d'autrui sur un tirage public défavorable. À la place, il forge lui-même des tirages artificiels situés systématiquement dans son propre intervalle $[85 ; 100]$ (1 bloc sur 4).
+
+\subsubsection*{Incapacité du contrôle R6 unitaire}
+Chaque bloc étant individuellement cohérent avec le tirage qu'il transporte ($\texttt{verifier\_bloc} = \text{True}$), la liste des blocs falsifiés reste totalement vide :
+\begin{center}
+\texttt{rep["blocs\_falsifies"] = []}
+\end{center}
+
+\subsubsection*{Détection par analyse statistique}
+L'attaque est démasquée par l'analyse fréquentielle globale (règle $\text{observe} - \text{attendu} > 3{,}0\,\%$) :
+
+\begin{table}[H]
+\centering
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+\textbf{Validateur} & \textbf{Part de mise} & \textbf{Part des blocs} & \textbf{Écart} & \textbf{Verdict de surveillance} \\
+\midrule
+Idriss  & 40,0\,\% & 28,8\,\% & $-11{,}2\,\%$ & normal \\
+Moussa  & 25,0\,\% & 18,8\,\% & $-6{,}2\,\%$  & normal \\
+Youssef & 20,0\,\% & 16,2\,\% & $-3{,}8\,\%$  & normal \\
+\textbf{Ayoub} & \textbf{15,0\,\%} & \textbf{36,2\,\%} & $\mathbf{+21{,}2\,\%}$ & \textbf{\texttt{SUSPECT}} \\
+\bottomrule
+\end{tabular}
+\caption{Détection de l'attaque discrète par anomalie de distribution}
+\label{tab:frequences_suspect}
+\end{table}
+
+Alors qu'Ayoub ne dispose que de 15\,\% de la mise, il génère plus de 36\,\% des blocs. Les deux modes de contrôle sont strictement complémentaires : la vérification unitaire intercepte les falsifications syntaxiques, tandis que le moniteur de fréquence neutralise la manipulation de l'aléatoire.
+
+% ------------------------------------------------------------------
+\section{Synthèse}
+
+\subsection{Bilan}
+Ce travail de simulation a permis de concrétiser les concepts fondamentaux du Proof of Stake :
+\begin{itemize}
+    \item la \textbf{sélection proportionnelle par roulette}, garantissant l'équité mathématique sans gaspillage d'énergie ;
+    \item la \textbf{vérification décentralisée R6}, rendue possible par la publicité des tirages et des états de mise enregistrés dans chaque bloc (R4) ;
+    \item l'\textbf{effet de centralisation économique R5}, inhérent aux mécanismes de récompense proportionnels ;
+    \item le \textbf{slashing R7}, assurant l'alignement des incitations en pénalisant financièrement la trahison.
+\end{itemize}
+
+\subsection{Limites de la simulation}
+Le réseau implémenté présente des simplifications pédagogiques :
+\begin{itemize}
+    \item \textbf{génération de l'aléatoire} : le tirage est confié au producteur ou au serveur HTTP, ce qui permet la fraude du test 4. En environnement réel, l'aléa doit provenir d'une \textbf{fonction aléatoire vérifiable} (VRF) ou d'un schéma de \emph{commit-reveal} (ex. RANDAO sur Ethereum) ;
+    \item \textbf{signatures cryptographiques} : les identités reposent sur des chaînes de caractères au lieu de clés publiques et signatures asymétriques (ECDSA / BLS) ;
+    \item \textbf{topologie centralisée} : les nœuds communiquent avec un serveur Flask unique au lieu d'un réseau peer-to-peer (P2P) à diffusion par commérage (\emph{gossip protocol}).
+\end{itemize}
+
+\subsection{Améliorations possibles}
+\begin{itemize}
+    \item intégrer une fonction aléatoire vérifiable (VRF) cryptographique garantissant l'impossibilité de truquer le tirage ;
+    \item implémenter un mécanisme de pondération non linéaire (ex. preuve d'enjeu quadratique ou délégation LPoS) pour freiner la centralisation des récompenses ;
+    \item coupler les blocs avec des signatures numériques ECDSA et des arbres de Merkle pour les transactions.
+\end{itemize}
+
+% ------------------------------------------------------------------
+\section{Annexes \& Bibliographie}
+
+\subsection{Annexe A : Dépôt du projet}
+
+Le code source intégral (notebooks exécutés, implémentation des règles et lanceur serveur) est consultable sur le dépôt GitHub :
+\begin{center}
+\url{https://github.com/ind4x/BLOCKCHAIN-LAB/tree/main/TP-02}
+\end{center}
+
+\subsection{Annexe B : Glossaire}
+\begin{description}
+    \item[Proof of Stake (PoS)] Protocole de consensus attribuant la production de blocs selon la proportion de cryptomonnaie mise en gage.
+    \item[Mise (Stake)] Montant d'actifs numériques immobilisé par un validateur pour garantir sa probité sous peine de confiscation.
+    \item[Proposant (Forger)] Validateur tiré au sort pour construire, signer et diffuser le prochain bloc.
+    \item[Slashing] Mécanisme de pénalité confisquant une fraction ou la totalité de la mise d'un nœud en cas de faute avérée.
+    \item[Roulette des mises] Méthode d'échantillonnage découpant un segment continu proportionnellement aux enjeux individuels.
+    \item[VRF (Verifiable Random Function)] Primitive cryptographique générant un nombre aléatoire imprévisible assorti d'une preuve publique de validité.
+\end{description}
+
+\subsection{Bibliographie}
+\begin{thebibliography}{9}
+\bibitem{king} S.~King et S.~Nadal, \emph{PPCoin: Peer-to-Peer Crypto-Currency with Proof-of-Stake}, 2012.
+\bibitem{buterin} V.~Buterin et V.~Griffith, \emph{Casper the Friendly Finality Gadget}, arXiv:1710.09437, 2017.
+\bibitem{micali} Y.~Gilad, R.~Hemo, S.~Micali, G.~Vlachos et N.~Zeldovich, \emph{Algorand: Scaling Byzantine Agreements for Cryptocurrencies}, ACM SOSP, 2017.
+\bibitem{flask} Pallets Projects, \emph{Flask Documentation (3.1.x) --- A lightweight WSGI web application framework}, 2026.
+\bibitem{tp} Université Mundiapolis, \emph{TP 02 --- Preuve d'enjeu (Proof of Stake)}, Campus Nouaceur, Filière Ingénierie Informatique.
+\end{thebibliography}
+
+\end{document}
